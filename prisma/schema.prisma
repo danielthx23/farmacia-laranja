@@ -1,0 +1,187 @@
+// schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url = env("POSTGRES_PRISMA_URL") 
+  directUrl = env("POSTGRES_URL_NON_POOLING") 
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Categoria {
+  id_categoria      String   @id @default(uuid())
+  nome_categoria    String   @db.VarChar(100)
+  descricao_categoria String?  @db.Text
+  pontos_categoria  Int      @default(0)
+  produtos          Produto[] @relation("ProdutoCategoria")
+}
+
+model Produto {
+  id_produto       String   @id @default(uuid())
+  nome             String   @db.VarChar(100)
+  preco            Decimal  @db.Decimal(10, 2)
+  data_validade    DateTime?
+  dosagem          String?  @db.VarChar(50)
+  imagem           String   @db.VarChar(255)
+  id_fabricante    String?  @db.Uuid
+  id_categoria      String   @db.Uuid
+  pontos_produto   Int      @default(0)
+  
+  categoria        Categoria @relation("ProdutoCategoria", fields: [id_categoria], references: [id_categoria])
+  itensVenda       ItensVenda[]
+  itensReceita     ItensReceita[]
+  itensCompra      ItensCompra[]
+  estoque          Estoque[]
+}
+
+model Fornecedor {
+  id_fornecedor    String   @id @default(uuid())
+  nome_fornecedor  String   @db.VarChar(100)
+  vendedor         String?  @db.VarChar(100)
+  email            String   @db.VarChar(100) @unique
+  telefone         String?  @db.VarChar(50)
+  endereco         String?  @db.VarChar(255)
+  compras          Compra[]
+}
+
+model Loja {
+  id_loja          String   @id @default(uuid())
+  nome_loja        String   @db.VarChar(100)
+  email            String   @db.VarChar(100) @unique
+  endereco         String?  @db.VarChar(255)
+  telefone         String?  @db.VarChar(20)
+
+  funcionarios     Funcionario[]
+  estoques         Estoque[]
+  vendas           Venda[]
+  compras          Compra[]
+}
+
+model Estoque {
+  id_estoque       String   @id @default(uuid())
+  id_produto       String   @db.Uuid
+  id_loja          String   @db.Uuid
+  quantidade_disponivel Int 
+
+  produto          Produto  @relation(fields: [id_produto], references: [id_produto])
+  loja             Loja     @relation(fields: [id_loja], references: [id_loja])
+}
+
+model Cliente {
+  id_cliente       String   @id @default(uuid())
+  nome_cliente     String   @db.VarChar(100)
+  CPF              String   @db.VarChar(14) @unique
+  data_nascimento  DateTime?
+  genero           String?  @db.VarChar(20)
+  estado_civil     String?  @db.VarChar(20)
+  telefone         String?  @db.VarChar(20)
+  email            String   @db.VarChar(100) @unique
+  endereco         String?  @db.VarChar(255)
+  pontos_totais    Int      @default(0)
+
+  vendas           Venda[]
+  receitas         Receita[]
+}
+
+model Funcionario {
+  id_funcionario   String   @id @default(uuid())
+  nome_funcionario String   @db.VarChar(100)
+  genero           String?  @db.VarChar(20)
+  data_nascimento  DateTime?
+  cargo            String?  @db.VarChar(50)
+  salario          Decimal  @db.Decimal(10, 2)
+  data_admissao    DateTime
+  id_loja          String   @db.Uuid
+
+  loja             Loja     @relation(fields: [id_loja], references: [id_loja])
+}
+
+model MeioPagamento {
+  id_meio_pagamento String   @id @default(uuid())
+  descricao         String   @db.VarChar(50)
+
+  vendas            Venda[]
+}
+
+model MeioEnvio {
+  id_meio_envio     String   @id @default(uuid())
+  descricao         String   @db.VarChar(50)
+
+  vendas            Venda[]
+}
+
+model Venda {
+  id_venda          String   @id @default(uuid())
+  data_venda        DateTime
+  id_cliente        String   @db.Uuid
+  id_loja          String   @db.Uuid
+  valor_total       Decimal  @db.Decimal(10, 2)
+  id_meio_pagamento String   @db.Uuid
+  id_meio_envio     String   @db.Uuid
+  pontos_venda      Int      @default(0)
+
+  cliente           Cliente   @relation(fields: [id_cliente], references: [id_cliente])
+  loja              Loja      @relation(fields: [id_loja], references: [id_loja])
+  meioPagamento     MeioPagamento @relation(fields: [id_meio_pagamento], references: [id_meio_pagamento])
+  meioEnvio        MeioEnvio @relation(fields: [id_meio_envio], references: [id_meio_envio])
+  itensVenda       ItensVenda[]
+}
+
+model ItensVenda {
+  id_itens_venda    String   @id @default(uuid())
+  id_venda          String   @db.Uuid
+  id_produto        String   @db.Uuid
+  quantidade        Int
+  preco_unitario    Decimal  @db.Decimal(10, 2)
+
+  venda             Venda     @relation(fields: [id_venda], references: [id_venda])
+  produto          Produto    @relation(fields: [id_produto], references: [id_produto])
+}
+
+model Receita {
+  id_receita        String   @id @default(uuid())
+  id_cliente        String   @db.Uuid
+  nome_medico       String   @db.VarChar(100)
+  CRM_medico        String   @db.VarChar(20)
+  data_emissao      DateTime
+  validade_receita  DateTime?
+
+  cliente           Cliente   @relation(fields: [id_cliente], references: [id_cliente])
+  itensReceita      ItensReceita[]
+}
+
+model ItensReceita {
+  id_receita        String   @db.Uuid
+  id_produto        String   @db.Uuid
+  quantidade_prescrita Int
+
+  @@id([id_receita, id_produto])
+  receita           Receita   @relation(fields: [id_receita], references: [id_receita])
+  produto           Produto    @relation(fields: [id_produto], references: [id_produto])
+}
+
+model Compra {
+  id_compra         String   @id @default(uuid())
+  valor_total       Decimal  @db.Decimal(10, 2)
+  data_compra       DateTime
+  data_entrega      DateTime
+  id_fornecedor     String   @db.Uuid
+  id_loja           String   @db.Uuid
+
+  fornecedor        Fornecedor @relation(fields: [id_fornecedor], references: [id_fornecedor])
+  loja              Loja       @relation(fields: [id_loja], references: [id_loja])
+  itensCompra       ItensCompra[]
+}
+
+model ItensCompra {
+  id_compra_item    String   @id @default(uuid())
+  id_compra         String   @db.Uuid
+  id_produto        String   @db.Uuid
+  quantidade_comprada Int
+  preco_unitario    Decimal  @db.Decimal(10, 2)
+
+  compra            Compra     @relation(fields: [id_compra], references: [id_compra])
+  produto          Produto     @relation(fields: [id_produto], references: [id_produto])
+}
